@@ -1,0 +1,75 @@
+/system scheduler
+add name="MikroTik Update Firmware" on-event=Auto-Up-Firmware start-time=06:00:00
+
+/system script
+add name=Auto-Up-Firmware source="## Set \
+    variables\r\
+    \n\r\
+    \n## Backup system file\r\
+    \n\r\
+    \n/system backup save name=([/system identity get name] . \"-\" . [:pick [\
+    /system clock get date] 7 11] . [:pick [/system clock get date] 0 3] . [:p\
+    ick [/system clock get date] 4 6]);\r\
+    \n\r\
+    \n:delay 60s;\r\
+    \n\r\
+    \n:log info (\"Backup on router.\")     \r\
+    \n\r\
+    \n## Notification e-mail\r\
+    \n:local email \"your@email.com\"\r\
+    \n\r\
+    \n## Check for update\r\
+    \n/system package update\r\
+    \nset channel=current\r\
+    \ncheck-for-updates\r\
+    \n\r\
+    \n## Waint on slow connections\r\
+    \n:delay 15s;\r\
+    \n\r\
+    \n## Important note: \"installed-version\" was \"current-version\" on olde\
+    r Roter OSes\r\
+    \n:if ([get installed-version] != [get latest-version]) do={ \r\
+    \n\r\
+    \n## New version of RouterOS available, let's upgrade\r\
+    \n   /tool e-mail send to=\"\$email\" subject=\"Upgrading RouterOS on rout\
+    er \$[/system identity get name]\" body=\"Upgrading RouterOS on router \$[\
+    /system identity get name] from \$[/system package update get installed-ve\
+    rsion] to \$[/system package update get latest-version] (channel:\$[/syste\
+    m package update get channel])\"\r\
+    \n   :log info (\"Upgrading RouterOS on router \$[/system identity get nam\
+    e] from \$[/system package update get installed-version] to \$[/system pac\
+    kage update get latest-version] (channel:\$[/system package update get cha\
+    nnel])\")     \r\
+    \n## Wait for mail to be send & upgrade\r\
+    \n   :delay 15s;\r\
+    \n   \r\
+    \n## \"install\" command is reincarnation of the \"upgrade\" command - doi\
+    ng exactly the same but under a different name\r\
+    \n   install\r\
+    \n} else={\r\
+    \n## RouterOS latest, let's check for updated firmware\r\
+    \n    :log info (\"No RouterOS upgrade found, checking for HW upgrade...\"\
+    )\r\
+    \n\r\
+    \n   /system routerboard\r\
+    \n   :if ( [get current-firmware] != [get upgrade-firmware]) do={ \r\
+    \n## New version of firmware available, let's upgrade\r\
+    \n      /tool e-mail send to=\"\$email\" subject=\"Upgrading firmware on r\
+    outer \$[/system identity get name]\" body=\"Upgrading firmware on router \
+    \$[/system identity get name] from \$[/system routerboard get current-firm\
+    ware] to \$[/system routerboard get upgrade-firmware]\"\r\
+    \n      :log info (\"Upgrading firmware on router \$[/system identity get \
+    name] from \$[/system routerboard get current-firmware] to \$[/system rout\
+    erboard get upgrade-firmware]\")\r\
+    \n      \r\
+    \n## Wait for mail to be send & upgrade\r\
+    \n      :delay 15s;\r\
+    \n      upgrade\r\
+    \n\r\
+    \n## Wait for upgrade, then reboot\r\
+    \n      :delay 360s;\r\
+    \n      /system reboot\r\
+    \n   } else={\r\
+    \n   :log info (\"No Router HW upgrade found\")\r\
+    \n   }\r\
+    \n}"
